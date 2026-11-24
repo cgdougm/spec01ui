@@ -1,0 +1,24 @@
+/* Gallery-only additions on top of the SPEC-01 skin. Nothing in vendor/ is edited. */
+
+/* A small lit LED after the name of a module that responds to input. */
+[data-skin="hardware"] [data-gallery-dot],
+[data-skin="hardware"] [data-gallery-live] [data-kit="caption"] [data-kit="chain-trigger"]::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-start: 7px;
+  border-radius: 50%;
+  vertical-align: 0.1em;
+  background: var(--key-lamp, var(--theme));
+  box-shadow: 0 0 6px color-mix(in oklab, var(--key-lamp, var(--theme)) 70%, transparent);
+}
+
+[data-skin="hardware"] [data-kit="masthead"] [data-gallery-legend] {
+  margin-top: 8px;
+}
+
+/* Module captions are plain text here (the original opens a hover card). */
+[data-skin="hardware"] [data-kit="chain-trigger"] {
+  cursor: default;
+}
