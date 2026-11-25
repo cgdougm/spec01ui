@@ -10,3 +10,8 @@ gpui = "0.2.2"
 lto = "thin"
 codegen-units = 1
 strip = true
+
+# gpui 0.2.2 pulls in xattr 0.2.3 (via zed-async-tar), which doesn't build on
+# Linux against current libc. patches/xattr is that release with a one-line fix.
+[patch.crates-io]
+xattr = { path = "patches/xattr" }
