@@ -1,0 +1,86 @@
+# Builds the gpui desktop apps (spec01 gallery + stress test) for Windows and
+# Linux. Every push/PR touching desktop/ uploads the binaries as workflow
+# artifacts; pushing a tag like v0.1.0 also attaches them to a GitHub Release.
+
+name: desktop
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  pull_request:
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # for attaching binaries to releases on tags
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x86_64
+            os: windows-latest
+          - name: linux-x86_64
+            os: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Linux build dependencies (gpui: X11, Wayland, fonts, Vulkan loader)"
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc g++ pkg-config libxkbcommon-x11-dev libxkbcommon-dev libxcb1-dev \
+            libx11-xcb-dev libwayland-dev libfontconfig-dev libfreetype6-dev \
+            libvulkan1 libzstd-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Package
+        shell: bash
+        run: |
+          out="spec01-${{ matrix.name }}"
+          mkdir -p "$out"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp target/release/spec01.exe target/release/stress.exe "$out/"
+          else
+            cp target/release/spec01 target/release/stress "$out/"
+          fi
+          cp README.md assets/fonts/OFL.txt "$out/"
+          cp tools/compare-bench.py "$out/"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a "$out.zip" "$out" > /dev/null
+            echo "ASSET=desktop/$out.zip" >> "$GITHUB_ENV"
+          else
+            # tar keeps the executable bits that a zip artifact would drop
+            tar czf "$out.tar.gz" "$out"
+            echo "ASSET=desktop/$out.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spec01-${{ matrix.name }}
+          path: ${{ env.ASSET }}
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ASSET }}

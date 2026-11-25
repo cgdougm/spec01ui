@@ -25,8 +25,9 @@ Owner preferences:
 
 ```sh
 # Ubuntu/Debian system deps for gpui (X11 + Wayland, Vulkan renderer)
-sudo apt install gcc g++ pkg-config libxkbcommon-x11-dev libxcb1-dev libwayland-dev \
-  libfontconfig-dev libvulkan1 mesa-vulkan-drivers
+sudo apt install gcc g++ pkg-config libxkbcommon-x11-dev libxkbcommon-dev libxcb1-dev \
+  libx11-xcb-dev libwayland-dev libfontconfig-dev libfreetype6-dev libzstd-dev \
+  libvulkan1 mesa-vulkan-drivers
 # Rust stable (if missing)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -48,6 +49,14 @@ yet. If it fails, likely causes:
 - Wayland vs X11 quirks (try `WAYLAND_DISPLAY= ./target/release/stress` to force X11)
 
 `build.rs` only adds Windows linker flags. On Linux it does nothing.
+
+### CI
+
+`.github/workflows/desktop.yml` builds both binaries on `windows-latest` and
+`ubuntu-24.04` for every push or PR touching `desktop/`. It uploads them as
+artifacts (`spec01-windows-x86_64.zip`, `spec01-linux-x86_64.tar.gz`) and
+attaches them to a GitHub Release when a `v*` tag is pushed. Its apt list is
+the reference for Linux build dependencies.
 
 ## Stress test: benchmarking across machines
 
