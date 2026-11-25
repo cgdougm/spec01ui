@@ -74,6 +74,7 @@ vendor/spec-01/            MIT-licensed files from shuding/spec-01 (see LICENSE 
   photos/                  carousel photos (Unsplash License, see PHOTOS.md)
 tools/extract-gallery.py   regenerates index.html from a DOM snapshot
 NOTES-svelte.md            plan for a SvelteKit version
+desktop/                   native Rust + gpui port of five components (see desktop/README.md)
 .local/                    untracked: spec-01 clone and DOM snapshot
 ```
 
