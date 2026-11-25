@@ -67,51 +67,53 @@ window (`.local/bench5.html`), each measured 4 s after launch:
 
 ## Stress test
 
-A second binary scrolls through a huge list of *racks*. A rack is one set of all
-five components with its own state, so 10,000 racks is 50,000 components.
+`stress` shows a wall of up to 50,000 widgets of **23 kinds**. Widgets pack
+into rows that re-flow when you resize the window or zoom, and the wall is
+virtualized, so only on-screen rows are built.
 
 ```sh
-cargo run --release --bin stress
-cargo run --release --bin stress -- --racks 10000 --bench 8   # prints frame stats and quits
+cargo run --release --bin stress -- --widgets 20000 --zoom 0.35 --motion wave --hue
 ```
 
-The controls bar has these settings:
-- **VIRTUAL / ALL**: a virtualized `uniform_list`, which builds only the racks on
-  screen, or one plain scrolling column that rebuilds every rack every frame.
-- **10 / 100 / 1,000 / 10,000** racks.
-- **ANIMATE**: moves every control in every rack on every frame.
-- **SCROLL**: auto-scrolls at 1500 px/s.
-- The readout shows FPS, the worst frame and the component count.
+- **Zoom:** Ctrl+= / Ctrl+- / Ctrl+0, or Ctrl+wheel. Every size is scaled, so
+  zooming re-lays everything out.
+- **Scrolling:** a draggable scrollbar (clicking the track pages), the mouse
+  wheel, PgUp/PgDn/Home/End and the arrow keys.
+- **Controls bar:**
+  - layout: MIXED / GROUPED (by kind, with headers)
+  - motion: OFF / NOISE / WAVE (a wave that ripples across the whole wall)
+  - toggles: HUE (rotates the key colour), SCROLL, CULL
+  - widget counts and zoom
+  - a live frame-time graph, FPS, render-build time, and widgets on screen
+- **Keys:** M motion, H hue, S scroll, L layout.
+- **Flags:** `--widgets N`, `--zoom Z`, `--layout mixed|grouped`,
+  `--motion off|noise|wave`, `--hue`, `--scroll`, `--no-cull`, `--kind NAME`,
+  `--bench SECS`, `--suite [FILE] --label NAME`.
 
-Flags: `--racks N`, `--all`, `--animate`, `--scroll`, `--bench SECONDS`. A bench
-turns on animate and scroll, skips a 2 s warm-up, then prints the result.
+### Comparing machines
 
-### Results (Windows 11, 60 Hz 4K display at 150%, release build)
+```sh
+./target/release/stress --suite bench/<label>.jsonl --label <label>   # ~1 min, keep the window in front
+python3 tools/compare-bench.py bench/*.jsonl
+```
 
-Benchmark mode, animating every control and scrolling:
+The suite runs 8 fixed scenarios (zoom 100% to 25%, up to 50,000 widgets). It
+writes one JSON line per scenario, with FPS, p50/p95/p99 frame times, build time
+and platform info. `bench/windows-rtx2060.jsonl` is the Windows baseline.
 
-| Layout | Racks | Components | Avg FPS | Median frame | p99 | CPU |
-|---|---|---|---|---|---|---|
-| virtual | 0 (empty window) | 0 | 59.7 | 16.7 ms | 26 ms | |
-| virtual | 1,000 | 5,000 | 44.7 | 21.7 ms | 47 ms | 34% of 1 core |
-| virtual | 10,000 | 50,000 | 44.7 | 21.8 ms | 47 ms | |
-| all | 100 | 500 | 10.1 | 98 ms | 111 ms | 100% of 1 core |
-| all | 1,000 | 5,000 | 1.0 | 962 ms | 990 ms | |
+### What made it faster (Windows, RTX 2060 laptop)
 
-What this shows:
-- **Virtualization makes the count irrelevant.** 10,000 racks run exactly like
-  1,000. At about 45 FPS the CPU is only 34% busy, so the limit is the GPU. This
-  laptop has an integrated Intel UHD 630 next to an RTX 2060, and drawing a
-  1600×1400 px window full of large blurred shadows costs it frames. An empty
-  window holds 60 FPS. To check, set *Windows Settings → Display → Graphics →
-  stress.exe → High performance* to run it on the RTX.
-- **Rebuilding everything every frame doesn't scale.** gpui is immediate-mode,
-  so the ALL layout re-creates and re-lays-out every element each frame, about
-  1 ms per rack here, fully on the CPU. Large views need `uniform_list` (or `list`).
-- **Batching paths helped a little.** Each tick ring is now one path per colour
-  and width rather than one path per tick (`ui::Rays`), and canvases skip
-  drawing when scrolled off screen. That took virtual from 42 to 45 FPS and ALL
-  from 7.6 to 10.1 FPS.
+| Change | Busy view (35% zoom, ~105 widgets animating) |
+|---|---|
+| first version, on the Intel iGPU | 71 ms/frame |
+| level-of-detail shadow trimming | 56 ms |
+| exporting `NvOptimusEnablement` so it runs on the RTX (gpui picks the first adapter) | 33 ms |
+| drawing dots, ticks and grids as GPU quads; monospace rows as one text run | 24 ms |
+| greeking unreadable text | **21 ms (46 FPS)** |
+
+At 60% zoom and above (about 35 widgets on screen) it holds 60 FPS, this
+display's refresh rate. What's left is gpui's CPU cost per element (layout and
+paint), not the GPU.
 
 ## How it maps from the web version
 

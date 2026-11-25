@@ -4,13 +4,13 @@
 
 use gpui::{
     Bounds, Context, Div, FontWeight, InteractiveElement, MouseButton, ParentElement, Pixels,
-    Styled, canvas, div, linear_color_stop, linear_gradient, point, px,
+    Styled, canvas, div, linear_color_stop, linear_gradient, point,
 };
 
 use crate::{
     rack::{Host, Rack},
     theme::{self, Theme},
-    ui::{Rays, label, module, scroll_steps, sh, visible},
+    ui::{fx, z, Rays, label, module, scroll_steps, sh, visible},
 };
 
 const W: f32 = 214.;
@@ -48,7 +48,7 @@ impl Dial {
 }
 
 pub fn mode_dial_module<H: Host>(r: &Rack, ri: usize, t: &Theme, cx: &mut Context<H>) -> Div {
-    let body = div().flex().gap(px(40.)).children((0..r.dials.len()).map(|di| dial(r, ri, di, t, cx)));
+    let body = div().flex().gap(z(40.)).children((0..r.dials.len()).map(|di| dial(r, ri, di, t, cx)));
     module(t, "53", "Mode dial", 492., body)
 }
 
@@ -65,7 +65,7 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
             if !visible(b, window) {
                 return;
             }
-            let c = point(b.origin.x + px(W / 2.), b.origin.y + px(R + 1.));
+            let c = point(b.origin.x + z(W / 2.), b.origin.y + z(R + 1.));
             let mut ticks = Rays::new(1.);
             for k in 0..=(sweep / 6.).round() as i32 {
                 ticks.add(c, -sweep / 2. + 6. * k as f32, R - 7., R - 1.);
@@ -81,6 +81,9 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
         |_, _, _| {},
         move |b: Bounds<Pixels>, _, window, _| {
             if !visible(b, window) {
+                return;
+            }
+            if crate::ui::lod() == 0 {
                 return;
             }
             let mut knurl = Rays::new(1.);
@@ -111,26 +114,26 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
     let knob_c = (W / 2., R + 1. - 3.);
     let knob = div()
         .absolute()
-        .left(px(knob_c.0 - 40.))
-        .top(px(knob_c.1 - 40.))
-        .size(px(80.))
+        .left(z(knob_c.0 - 40.))
+        .top(z(knob_c.1 - 40.))
+        .size(z(80.))
         .rounded_full()
         .bg(theme::rgb(217, 216, 211))
         .cursor_pointer()
-        .shadow(vec![
+        .shadow(fx(vec![
             sh(0., 0., 0., 0.5, theme::rgba(0, 0, 0, 0.08)),
             sh(0., 3., 0., 0., theme::rgb(196, 195, 190)),
             sh(0., 3., 0., 0.5, theme::rgba(0, 0, 0, 0.1)),
             sh(0.5, 4., 2., 0., theme::shade(0.18)),
             sh(1., 8., 12., -2., theme::shade(0.16)),
-        ])
+        ]))
         .child(knurl)
         .child(
             div()
                 .absolute()
-                .left(px(4.))
-                .top(px(4.))
-                .size(px(KNOB))
+                .left(z(4.))
+                .top(z(4.))
+                .size(z(KNOB))
                 .rounded_full()
                 .bg(linear_gradient(155., linear_color_stop(theme::rgb(255, 255, 255), 0.15), linear_color_stop(theme::rgb(224, 223, 218), 1.)))
                 .border_t_1()
@@ -138,9 +141,9 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
                 .child(
                     div()
                         .absolute()
-                        .left(px(KNOB / 2. - 31.))
-                        .top(px(KNOB / 2. - 31.))
-                        .size(px(62.))
+                        .left(z(KNOB / 2. - 31.))
+                        .top(z(KNOB / 2. - 31.))
+                        .size(z(62.))
                         .rounded_full()
                         .border_1()
                         .border_color(theme::rgba(0, 0, 0, 0.05)),
@@ -157,28 +160,28 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
         let a = d.angle(i).to_radians();
         let (sx, sy) = (W / 2. + a.sin() * STOP_R, R + 1. - a.cos() * STOP_R);
         let chip = div()
-            .h(px(20.))
-            .px(px(5.))
-            .min_w(px(20.))
+            .h(z(20.))
+            .px(z(5.))
+            .min_w(z(20.))
             .flex()
             .items_center()
             .justify_center()
-            .rounded(px(10.))
-            .text_size(px(8.))
+            .rounded(z(10.))
+            .text_size(z(8.))
             .font_weight(FontWeight::MEDIUM)
             .cursor_pointer()
             .child(s.to_uppercase());
         let chip = if i == d.chosen {
-            chip.bg(t.cap.hsla()).text_color(t.on_accent).shadow(vec![sh(0., 1., 0., 0., theme::rgba(255, 255, 255, 0.6))])
+            chip.bg(t.cap.hsla()).text_color(t.on_accent).shadow(fx(vec![sh(0., 1., 0., 0., theme::rgba(255, 255, 255, 0.6))]))
         } else {
             chip.text_color(theme::print())
         };
         // Centered on its point: a 60px box, the chip centered inside.
         div()
             .absolute()
-            .left(px(sx - 30.))
-            .top(px(sy - 10.))
-            .w(px(60.))
+            .left(z(sx - 30.))
+            .top(z(sy - 10.))
+            .w(z(60.))
             .flex()
             .justify_center()
             .child(chip.on_mouse_down(MouseButton::Left, cx.listener(move |this: &mut H, _, _, cx| {
@@ -189,8 +192,8 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
 
     let face = div()
         .relative()
-        .w(px(W))
-        .h(px(H))
+        .w(z(W))
+        .h(z(H))
         .child(scale)
         .children(stops)
         .child(knob)
@@ -206,5 +209,5 @@ fn dial<H: Host>(r: &Rack, ri: usize, di: usize, t: &Theme, cx: &mut Context<H>)
             }
         }));
 
-    div().flex().flex_col().gap(px(8.)).child(label(d.name)).child(face)
+    div().flex().flex_col().gap(z(8.)).child(label(d.name)).child(face)
 }

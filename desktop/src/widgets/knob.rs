@@ -4,13 +4,13 @@
 
 use gpui::{
     Bounds, Context, Div, FontWeight, InteractiveElement, MouseButton, ParentElement, Pixels,
-    Styled, canvas, div, linear_color_stop, linear_gradient, px,
+    Styled, canvas, div, linear_color_stop, linear_gradient,
 };
 
 use crate::{
     rack::{Drag, Host, Rack},
     theme::{self, Theme},
-    ui::{Rays, label, module, scroll_steps, sh, visible},
+    ui::{fx, z, Rays, label, module, scroll_steps, sh, visible},
 };
 
 pub const NAMES: [&str; 4] = ["Tone", "Drive", "Space", "Mix"];
@@ -23,8 +23,8 @@ pub fn lit_ticks(v: f32) -> usize {
 }
 
 pub fn knob_module<H: Host>(r: &Rack, ri: usize, t: &Theme, cx: &mut Context<H>) -> Div {
-    let body = div().flex().gap(px(12.)).children((0..4).map(|i| knob(r, ri, t, i, cx)));
-    module(t, "06", "Flat knob", 492., body).h(px(190.))
+    let body = div().flex().gap(z(12.)).children((0..4).map(|i| knob(r, ri, t, i, cx)));
+    module(t, "06", "Flat knob", 492., body).h(z(190.))
 }
 
 fn knob<H: Host>(r: &Rack, ri: usize, t: &Theme, i: usize, cx: &mut Context<H>) -> Div {
@@ -59,31 +59,31 @@ fn knob<H: Host>(r: &Rack, ri: usize, t: &Theme, i: usize, cx: &mut Context<H>) 
     let (dx, dy) = (turn.sin() * 15., -turn.cos() * 15.);
     let cap = div()
         .absolute()
-        .left(px(12.))
-        .top(px(12.))
-        .size(px(48.))
+        .left(z(12.))
+        .top(z(12.))
+        .size(z(48.))
         .rounded_full()
         .bg(linear_gradient(180., linear_color_stop(theme::rgb(255, 255, 255), 0.2), linear_color_stop(theme::rgb(243, 243, 242), 0.85)))
-        .shadow(vec![
+        .shadow(fx(vec![
             sh(0., 0., 0., 2., theme::rgb(44, 44, 43)),
             sh(0.5, 1.5, 1.5, 2., theme::shade(0.18)),
             sh(1., 3., 5., 2., theme::shade(0.11)),
             sh(2., 5., 9., -1., theme::shade(0.11)),
-        ])
+        ]))
         .child(
             div()
                 .absolute()
-                .left(px(24. + dx - 2.1))
-                .top(px(24. + dy - 2.1))
-                .size(px(4.2))
+                .left(z(24. + dx - 2.1))
+                .top(z(24. + dy - 2.1))
+                .size(z(4.2))
                 .rounded_full()
                 .bg(t.key.hsla())
-                .shadow(vec![sh(0., 0., 2., 0., t.key.alpha(0.55))]),
+                .shadow(fx(vec![sh(0., 0., 2., 0., t.key.alpha(0.55))])),
         );
 
     let dial = div()
         .relative()
-        .size(px(DIAL))
+        .size(z(DIAL))
         .cursor_ns_resize()
         .child(ticks)
         .child(cap)
@@ -106,9 +106,9 @@ fn knob<H: Host>(r: &Rack, ri: usize, t: &Theme, i: usize, cx: &mut Context<H>) 
         .flex()
         .flex_col()
         .items_center()
-        .gap(px(6.))
-        .w(px(DIAL + 12.))
+        .gap(z(6.))
+        .w(z(DIAL + 12.))
         .child(dial)
-        .child(div().pt(px(2.)).text_size(px(15.)).font_weight(FontWeight::LIGHT).text_color(theme::text()).child(format!("{}", v.round() as i32)))
+        .child(div().pt(z(2.)).text_size(z(15.)).font_weight(FontWeight::LIGHT).text_color(theme::text()).child(format!("{}", v.round() as i32)))
         .child(label(NAMES[i]))
 }

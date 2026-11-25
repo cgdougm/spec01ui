@@ -6,12 +6,24 @@ pub mod theme;
 pub mod ui;
 pub mod widgets;
 
+/// Hybrid-GPU hints, exported from the executables by build.rs: 1 asks the
+/// NVIDIA / AMD driver to run the app on the discrete GPU.
+pub mod gpu {
+    #[unsafe(no_mangle)]
+    #[used]
+    pub static NvOptimusEnablement: u32 = 1;
+    #[unsafe(no_mangle)]
+    #[used]
+    pub static AmdPowerXpressRequestHighPerformance: u32 = 1;
+}
+
 use std::borrow::Cow;
 
-use gpui::{App, Div, ParentElement, Styled, div, px};
+use gpui::{App, Div, ParentElement, Styled, div};
 
 use rack::{Host, Rack};
 use theme::Theme;
+use ui::z;
 
 const FONTS: [&[u8]; 4] = [
     include_bytes!("../assets/fonts/IBMPlexMono-ExtraLight.ttf"),
@@ -32,12 +44,12 @@ pub const RACK_HEIGHT: f32 = 190. + 16. + 272.;
 
 /// The five modules of one rack, in two rows, 1000px wide.
 pub fn rack_view<H: Host>(r: &Rack, ri: usize, t: &Theme, cx: &mut gpui::Context<H>) -> Div {
-    let row = || div().flex().items_start().gap(px(16.));
+    let row = || div().flex().items_start().gap(z(16.));
     div()
-        .w(px(1000.))
+        .w(z(1000.))
         .flex()
         .flex_col()
-        .gap(px(16.))
+        .gap(z(16.))
         .child(
             row()
                 .child(widgets::button::button_module(r, ri, t, cx))
@@ -46,7 +58,7 @@ pub fn rack_view<H: Host>(r: &Rack, ri: usize, t: &Theme, cx: &mut gpui::Context
         )
         .child(
             row()
-                .child(widgets::knob::knob_module(r, ri, t, cx).h(px(272.)))
-                .child(widgets::mode_dial::mode_dial_module(r, ri, t, cx).h(px(272.))),
+                .child(widgets::knob::knob_module(r, ri, t, cx).h(z(272.)))
+                .child(widgets::mode_dial::mode_dial_module(r, ri, t, cx).h(z(272.))),
         )
 }
