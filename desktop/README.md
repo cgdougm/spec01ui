@@ -14,9 +14,13 @@ the navbar key picker. All six key colours re-theme the whole app live.
 |---|---|
 | Keys | press and release; the key sinks onto its lip |
 | Switch | click; the thumb eases across |
-| Slider | click or drag anywhere on it; scroll wheel nudges |
-| Knobs | drag up/down (2 px per step) or scroll |
-| Mode dial | click a stop or the knob, or scroll over it; the knob eases round |
+| Slider | click or drag anywhere on it; Shift+wheel nudges |
+| Knobs | drag up/down (2 px per step) or Shift+wheel |
+| Mode dial | click a stop or the knob, or Shift+wheel over it; the knob eases round |
+
+The components live in a library (`src/lib.rs`, `src/widgets/`). Each set of
+five, with its state, is a `Rack` (`src/rack.rs`). Any view that implements
+`rack::Host` can show racks, which is how both binaries share them.
 
 ## Build and run
 
@@ -60,6 +64,54 @@ window (`.local/bench5.html`), each measured 4 s after launch:
 | Memory, private | 67 MB | 357 MB |
 | Time to window | 0.6 s | 0.77 s |
 | Binary | 6.9 MB | (browser) |
+
+## Stress test
+
+A second binary scrolls through a huge list of *racks*. A rack is one set of all
+five components with its own state, so 10,000 racks is 50,000 components.
+
+```sh
+cargo run --release --bin stress
+cargo run --release --bin stress -- --racks 10000 --bench 8   # prints frame stats and quits
+```
+
+The controls bar has these settings:
+- **VIRTUAL / ALL**: a virtualized `uniform_list`, which builds only the racks on
+  screen, or one plain scrolling column that rebuilds every rack every frame.
+- **10 / 100 / 1,000 / 10,000** racks.
+- **ANIMATE**: moves every control in every rack on every frame.
+- **SCROLL**: auto-scrolls at 1500 px/s.
+- The readout shows FPS, the worst frame and the component count.
+
+Flags: `--racks N`, `--all`, `--animate`, `--scroll`, `--bench SECONDS`. A bench
+turns on animate and scroll, skips a 2 s warm-up, then prints the result.
+
+### Results (Windows 11, 60 Hz 4K display at 150%, release build)
+
+Benchmark mode, animating every control and scrolling:
+
+| Layout | Racks | Components | Avg FPS | Median frame | p99 | CPU |
+|---|---|---|---|---|---|---|
+| virtual | 0 (empty window) | 0 | 59.7 | 16.7 ms | 26 ms | |
+| virtual | 1,000 | 5,000 | 44.7 | 21.7 ms | 47 ms | 34% of 1 core |
+| virtual | 10,000 | 50,000 | 44.7 | 21.8 ms | 47 ms | |
+| all | 100 | 500 | 10.1 | 98 ms | 111 ms | 100% of 1 core |
+| all | 1,000 | 5,000 | 1.0 | 962 ms | 990 ms | |
+
+What this shows:
+- **Virtualization makes the count irrelevant.** 10,000 racks run exactly like
+  1,000. At about 45 FPS the CPU is only 34% busy, so the limit is the GPU. This
+  laptop has an integrated Intel UHD 630 next to an RTX 2060, and drawing a
+  1600×1400 px window full of large blurred shadows costs it frames. An empty
+  window holds 60 FPS. To check, set *Windows Settings → Display → Graphics →
+  stress.exe → High performance* to run it on the RTX.
+- **Rebuilding everything every frame doesn't scale.** gpui is immediate-mode,
+  so the ALL layout re-creates and re-lays-out every element each frame, about
+  1 ms per rack here, fully on the CPU. Large views need `uniform_list` (or `list`).
+- **Batching paths helped a little.** Each tick ring is now one path per colour
+  and width rather than one path per tick (`ui::Rays`), and canvases skip
+  drawing when scrolled off screen. That took virtual from 42 to 45 FPS and ALL
+  from 7.6 to 10.1 FPS.
 
 ## How it maps from the web version
 
